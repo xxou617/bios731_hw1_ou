@@ -25,11 +25,13 @@ Xiaxian Ou
 `fit_model`: Use `lm()` when epsilon follows normal distribution and
 `glm()` with `gaussian(log)` for lognormal distribution
 
-functions to calculate confidence interval by different methods -
-`standard_wald`: Wald confidence intervals - `boot_quantile`:
-Nonparametric bootstrap percentile intervals - `boot_t`: Nonparametric
-bootstrap t intervals; `boot_quantile` is also used inside this function
-to calculate $\hat{se}(\hat{\theta}^*_b)$ for each bootstrap estimate
+functions to calculate confidence interval by different methods
+
+- `standard_wald`: Wald confidence intervals
+- `boot_quantile`: Nonparametric bootstrap percentile intervals
+- `boot_t`: Nonparametric bootstrap t intervals; `boot_quantile` is also
+  used inside this function to calculate $\hat{se}(\hat{\theta}^*_b)$
+  for each bootstrap estimate
 
 *data*
 
@@ -72,7 +74,8 @@ The function `simulate_scenario` is defined in a specific scenario to:
 
 - Simulate Data: Generate datasets tailored to the scenario’s parameters
   using `get_simdata()`.
-- Fit Model: Fit a regression model to estimate the treatment effect.
+- Fit Model: Fit a regression model to estimate the treatment effect by
+  `lm()` or `glm()` with `gaussian('log)`.
 - Compute CIs: Use one of the three CI methods: `standard_wald()`,
   `boot_quantile()` or `boot_t()`. Meanwhile, use `toc` and `tic` to
   calculate the computation time.
