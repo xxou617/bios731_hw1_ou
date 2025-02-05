@@ -260,3 +260,119 @@ Wald CI
 - Which method(s) for constructing confidence intervals provide the best coverage when $\epsilon_i \sim logNormal(0, \log (2))$?
 
 boot t CI
+
+
+
+
+# Additional discussion
+
+
+Below are the outcomes when the model is fitted using `lm()` for both the normal and log-normal distributions. In this case, the Wald CI provides the best coverage for both $\epsilon_i \sim N(0, 2)$ and $\epsilon_i \sim logNormal(0, \log (2))$
+
+
+```{r}
+load(here::here("data", "all_scenarios0.Rdata"))
+```
+
+```{r}
+# summarise results grouped by the scenarios
+
+final_results <- final_results |> 
+  mutate(
+    beta_true = as.factor(beta_true),
+    epsilon_distr = factor(epsilon_distr, levels = c("Normal", "logNormal")),
+    CI_method = factor(CI_method, levels = c("Wald", "boot quantile", "boot t"))
+  )
+
+simu_evaluate <- final_results |> 
+  group_by(n, beta_true, epsilon_distr, CI_method) |> 
+  summarise(
+    bias = mean(error),
+    avg_se = mean(est_se),
+    avg_time = mean(cal_CI_time),
+    coverage_rate = mean(coverage),
+    .groups = "drop" 
+  ) 
+
+head(simu_evaluate)
+```
+
+
+```{r, fig.align='center', fig.width = 7, fig.height= 6}
+sample_size = unique(simu_evaluate$n)
+
+
+# Plot for bias
+ggplot(simu_evaluate, 
+       aes(x = n, y = bias, color = beta_true, group = beta_true)) +
+  geom_point(size = 2) +  
+  geom_line() +  
+  geom_hline(yintercept = 0, linetype = "dashed", color = "blue") + 
+  labs(x = "Sample Size", y = "Bias", color = "Beta True",
+       title = "Bias Across Sample Sizes for \nDifferent CI Methods and Error Distributions") +  
+  theme_bw() +
+  theme(legend.position = "top") +
+  facet_grid( cols = vars(CI_method), rows = vars(epsilon_distr)) +
+  scale_x_continuous(breaks = sample_size)  -> plot_bias
+
+plot_bias
+```
+
+```{r, fig.align='center', fig.width = 7, fig.height= 6}
+
+# plot for coverage
+
+ggplot(simu_evaluate, 
+       aes(x = n, y = coverage_rate, color = beta_true, group = beta_true)) +
+  geom_point(size = 2) +  
+  geom_line() +  
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "blue") +  
+  labs(x = "Sample Size", y = "Coverage", color = "Beta True",
+       title = "Coverage rate Across Sample Sizes for \nDifferent CI Methods and Error Distributions") +  
+  theme_bw() +
+  theme(legend.position = "top") +
+  facet_grid( cols = vars(CI_method), rows = vars(epsilon_distr)) +
+  scale_x_continuous(breaks = sample_size)  -> plot_coverage
+
+plot_coverage
+
+```
+
+```{r, fig.align='center', fig.width = 6, fig.height= 6}
+
+# distribution of se(beta_hat)
+ggplot(final_results, 
+       aes(x = as.factor(n), y = est_se, color = beta_true)) +
+  geom_boxplot() +
+  labs(x = "Sample Size", 
+       y = "Estimated Standard Error", 
+       color = "Beta True",
+       title = "Distribution of Estimated Standard Errors Across \nSample Sizes, CI Methods, and Error Distributions") +
+  theme_bw() +
+  theme(legend.position = "top") +
+  facet_grid(cols = vars(CI_method), rows = vars(epsilon_distr), scales = "free_y") +
+  scale_x_discrete(labels = sample_size) -> plot_se
+
+plot_se
+
+```
+
+```{r, fig.align='center', fig.width = 7, fig.height= 8}
+
+# plot for calculation time
+ggplot(final_results, aes(x = as.factor(n), y = cal_CI_time, color = beta_true)) +
+  geom_boxplot() +
+  labs(x = "Sample Size", 
+       y = "Computation Time", 
+       color = "Beta True",
+       title = "Distribution of Time for CI Calculation Across \nSample Sizes, CI Methods, and Error Distributions") +
+  theme_bw() +
+  theme(legend.position = "top") +
+  facet_wrap(~epsilon_distr+CI_method, scales = "free_y") +
+  scale_x_discrete(labels = sample_size) -> plot_time
+
+plot_time
+``` 
+
+
+
