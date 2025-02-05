@@ -1,16 +1,33 @@
+# glm model
+fit_model = function(simulated_data, epsilon_distr){
+  if(epsilon_distr == "Normal"){
+    fit = lm(y ~ x, data = simulated_data)
+  }
+  
+  if(epsilon_distr == "logNormal"){
+    fit = glm(y ~ x, data = simulated_data, family = gaussian("log"))
+  }
+  
+  return(fit)
+}
+
+
+
 # Wald confidence intervals
-standard_wald = function(simulated_data){
-  model_fit = lm(y ~ x, data = simulated_data)
-  broom::tidy(model_fit, conf.int = TRUE) |> 
-    filter(term == "x") |> 
-    rename(est_se = std.error) |> 
-    select(est_se, conf.low, conf.high) 
+standard_wald = function(simulated_data, epsilon_distr, alpha = 0.05){
+  model = fit_model(simulated_data, epsilon_distr)
+  
+  est_se = summary(model)$coefficients["x", "Std. Error"]
+  conf.low = model$coefficients[["x"]] - qnorm(1 - alpha/2)*est_se
+  conf.high = model$coefficients[["x"]] + qnorm(1 - alpha/2)*est_se
+  
+  data.frame(est_se, conf.low, conf.high)
 }
 
 
 
 # Nonparametric bootstrap percentile intervals
-boot_quantile = function(simulated_data, nboot, alpha = 0.05){
+boot_quantile = function(simulated_data, epsilon_distr, nboot, alpha = 0.05){
   boot_beta <- rep(NA, nboot)
   sample_size <- nrow(simulated_data)
   
@@ -21,7 +38,7 @@ boot_quantile = function(simulated_data, nboot, alpha = 0.05){
     boot_sample = simulated_data[sample_index, ]
     
     # run linear regression
-    model = lm(y ~ x, data = boot_sample)
+    model = fit_model(boot_sample, epsilon_distr)
     
     # get estimated beta
     boot_beta[b] = model$coefficients[["x"]]
@@ -39,7 +56,7 @@ boot_quantile = function(simulated_data, nboot, alpha = 0.05){
 
 
 # Nonparametric bootstrap t intervals
-boot_t = function(simulated_data, est_beta, est_se, nboot_t, nboot_se, alpha = 0.05){
+boot_t = function(simulated_data, epsilon_distr, est_beta, est_se, nboot_t, nboot_se, alpha = 0.05){
   t_star <- rep(NA, nboot_t)
   sample_size <- nrow(simulated_data)
   
@@ -50,14 +67,14 @@ boot_t = function(simulated_data, est_beta, est_se, nboot_t, nboot_se, alpha = 0
     boot_sample = simulated_data[sample_index, ]
     
     # run linear regression
-    model = lm(y ~ x, data = boot_sample)
+    model = fit_model(boot_sample, epsilon_distr)
     
     # get estimated beta
     boot_beta = model$coefficients[["x"]]
     
     # get se_beta of each bootstrap using bootstrap
     # ! use boot_sample as input
-    inner_boot <- boot_quantile(boot_sample, nboot_se, alpha = 0.05)
+    inner_boot <- boot_quantile(boot_sample, epsilon_distr, nboot_se, alpha = 0.05)
     boot_se <- inner_boot$est_se
     
     # get boot_t
