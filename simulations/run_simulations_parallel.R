@@ -30,7 +30,7 @@ params.all$scenario_id = 1:nrow(params.all)
 
 # Define simulation function for each scenario
 simulate_scenario <- function(params, seeds, nsim, 
-                              nboot = 100, nboot_t = 200, nboot_se = 200) {
+                              nboot , nboot_t , nboot_se ) {
   # Generate seeds for reproducibility
   results <- vector("list", nsim)
   
@@ -47,31 +47,30 @@ simulate_scenario <- function(params, seeds, nsim,
     
     # **************************************
     # Apply method(s)  *********************
-    fit_lm <- lm(y ~ x, data = simdata)
-    est_beta <- fit_lm$coefficients[["x"]]
-    est_se <- summary(fit_lm)$coefficients["x", "Std. Error"]
+    model <- fit_model(simdata, params$epsilon_distr)
+    est_beta <- model$coefficients[["x"]]
+    est_se <- summary(model)$coefficients["x", "Std. Error"]
     
     
     ## Wald
     if(params$CI_method == "Wald"){
       tic()
-      est_out <- standard_wald(simdata) 
+      est_out <- standard_wald(simdata, params$epsilon_distr) 
       time_stamp = toc(quiet = TRUE)
     }
     
     ## boot quantile
     if(params$CI_method == "boot quantile"){
       tic()
-      est_out <- boot_quantile(simdata, nboot)
+      est_out <- boot_quantile(simdata, params$epsilon_distr, nboot)
       time_stamp = toc(quiet = TRUE)
     } 
     
     ## boot t
     if(params$CI_method == "boot t"){
       tic()
-      est_out <- boot_t(simdata, est_beta, est_se, nboot_t, nboot_se)
+      est_out <- boot_t(simdata, params$epsilon_distr, est_beta, est_se, nboot_t, nboot_se)
       time_stamp = toc(quiet = TRUE)
-      
     } 
     
     # record time 
@@ -94,7 +93,7 @@ simulate_scenario <- function(params, seeds, nsim,
   results_dt <- do.call(rbind, results)
   
   # Save results for the current scenario
-  filename <- paste0("scenario_", params$scenario_id, ".RDA")
+  filename <- paste0("scenario_", params$scenario_id, ".Rdata")
   save(results_dt, file = here::here("data", filename))
   
   return(results_dt)
@@ -115,7 +114,7 @@ plan(multisession, workers = parallel::detectCores() - 1)
 set.seed(1)
 seeds = sample(1:10000, nsim) 
 
-# for boot quantile, nboot = 1000 
+# for boot quantile, nboot = 500 
 # for boot t interval, nboot_t = 500, and nboot_se = 200 for nested bootstrap
 nboot = 500
 nboot_t = 500
