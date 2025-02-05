@@ -9,11 +9,11 @@ urlcolor: blue
 
 ```{r, include=FALSE}
 
-knitr::opts_chunk$set(tidy = FALSE)
+knitr::opts_chunk$set(tidy = FALSE, message = F, warning = F)
 ```
 
 
-Github link:
+Github link: [https://github.com/xxou617/bios731_hw1_ou](https://github.com/xxou617/bios731_hw1_ou)
 
 $$Y_i = \beta_0 + \beta_{treatment}X_{i1} + \mathbf{Z_i}^T\boldsymbol{\gamma} + \epsilon_i$$
 
@@ -73,11 +73,12 @@ Thus, we have 54 scenarios in total.
 
 #### (3) What method(s) are being evaluated/compared?
 
-- Wald confidence intervals (the standard approach), nonparametric bootstrap percentile intervals and nonparametric bootstrap $t$ intervals for $se(\hat{\beta}_{treatment})$ will be evaluated.
+- Wald confidence intervals (the standard approach), nonparametric bootstrap percentile intervals and nonparametric bootstrap $t$ intervals for $se(\hat{\beta}_{treatment})$ in different scenario will be evaluated.
 
 #### (4) What are the performance measure(s)?
 
 - bias
+- $se(\hat{\beta})$
 - coverage
 - computation time
 
@@ -150,7 +151,7 @@ head(simu_evaluate)
 ```
 
 
-```{r, fig.align='center', fig.width = 12, fig.height= 4}
+```{r, fig.align='center', fig.width = 7, fig.height= 6}
 sample_size = unique(simu_evaluate$n)
 
 
@@ -161,66 +162,101 @@ ggplot(simu_evaluate,
   geom_line() +  
   geom_hline(yintercept = 0, linetype = "dashed", color = "blue") + 
   labs(x = "Sample Size", y = "Bias", color = "Beta True",
-       title = "Bias Across Sample Sizes for Different CI Methods and Error Distributions") +  
+       title = "Bias Across Sample Sizes for \nDifferent CI Methods and Error Distributions") +  
   theme_bw() +
+  theme(legend.position = "top") +
   facet_grid( cols = vars(CI_method), rows = vars(epsilon_distr)) +
-  scale_x_continuous(breaks = sample_size) 
+  scale_x_continuous(breaks = sample_size)  -> plot_bias
 
+plot_bias
+```
+
+```{r, fig.align='center', fig.width = 7, fig.height= 6}
+
+# plot for coverage
+
+ggplot(simu_evaluate, 
+       aes(x = n, y = coverage_rate, color = beta_true, group = beta_true)) +
+  geom_point(size = 2) +  
+  geom_line() +  
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "blue") +  
+  labs(x = "Sample Size", y = "Coverage", color = "Beta True",
+       title = "Coverage rate Across Sample Sizes for \nDifferent CI Methods and Error Distributions") +  
+  theme_bw() +
+  theme(legend.position = "top") +
+  facet_grid( cols = vars(CI_method), rows = vars(epsilon_distr)) +
+  scale_x_continuous(breaks = sample_size)  -> plot_coverage
+
+plot_coverage
 
 ```
 
-```{r, fig.align='center', fig.width = 12, fig.height= 6}
+```{r, fig.align='center', fig.width = 6, fig.height= 6}
 
-ggplot(simu_evaluate, aes(x = n, y = coverage_rate, color = as.factor(beta_true), group = as.factor(beta_true))) +
-  geom_point(size = 2) +  # Scatter points
-  geom_line() +  # Lines for each beta_true group
-  geom_hline(yintercept = 0.95, linetype = "dashed", color = "blue") +  # Reference line at 0
-  labs(x = "Sample Size", y = "Coverage rate", color = "Beta True",
-       title = "Coverage rate Across Sample Sizes for Different CI Methods and Error Distributions") +  # Color legend label
-  theme_bw() +
-  facet_grid( cols = vars(CI_method), rows = vars(epsilon_distr)) +
-
-  scale_x_continuous(
-    breaks = sample_size,  # Set breaks at sample_size values
-    labels = sample_size  # Set labels as sample_size
-  ) 
-
-
-```
-
-```{r, fig.align='center', fig.width = 9, fig.height= 8}
-
-ggplot(final_results, aes(x = as.factor(n), y = est_se, color = beta_true)) +
+# distribution of se(beta_hat)
+ggplot(final_results, 
+       aes(x = as.factor(n), y = est_se, color = beta_true)) +
   geom_boxplot() +
   labs(x = "Sample Size", 
        y = "Estimated Standard Error", 
        color = "Beta True",
-       title = "Distribution of Estimated Standard Errors Across Sample Sizes, CI Methods, and Error Distributions") +
+       title = "Distribution of Estimated Standard Errors Across \nSample Sizes, CI Methods, and Error Distributions") +
   theme_bw() +
+  theme(legend.position = "top") +
   facet_grid(cols = vars(CI_method), rows = vars(epsilon_distr), scales = "free_y") +
-  scale_x_discrete(labels = sample_size) 
+  scale_x_discrete(labels = sample_size) -> plot_se
 
+plot_se
 
 ```
 
-```{r, fig.align='center', fig.width = 9, fig.height= 8}
-ggplot(final_results, aes(x = as.factor(n), y = cal_CI_time, color = as.factor(beta_true))) +
+```{r, fig.align='center', fig.width = 7, fig.height= 8}
+
+# plot for calculation time
+ggplot(final_results, aes(x = as.factor(n), y = cal_CI_time, color = beta_true)) +
   geom_boxplot() +
   labs(x = "Sample Size", 
-       y = "Estimated Standard Error", 
+       y = "Computation Time", 
        color = "Beta True",
-       title = "Distribution of Time for CI Calculation Across Sample Sizes, CI Methods, and Error Distributions") +
+       title = "Distribution of Time for CI Calculation Across \nSample Sizes, CI Methods, and Error Distributions") +
   theme_bw() +
+  theme(legend.position = "top") +
   facet_wrap(~epsilon_distr+CI_method, scales = "free_y") +
-  scale_x_discrete(labels = sample_size) 
+  scale_x_discrete(labels = sample_size) -> plot_time
+
+plot_time
 ``` 
 
+```{r}
+
+# save plots in results folder
+ggsave(plot_bias, file = here::here("results", "plot_bias.jpg"),
+       width = 7, height = 6)
+ggsave(plot_coverage, file = here::here("results", "plot_coverage.jpg"),
+       width = 7, height = 6)
+ggsave(plot_se, file = here::here("results", "plot_se.jpg"),
+       width = 6, height = 6)
+ggsave(plot_time, file = here::here("results", "plot_time.jpg"),
+       width = 7, height = 8)
+
+```
 
 
 ### Problem 1.5 Discussion
 
 Interpret the results summarized in Problem 1.4. First, write a **paragraph** summarizing the main findings of your simulation study. Then, answer the specific questions below.
 
+The simulation study evaluated three confidence interval (CI) methods—Wald intervals, bootstrapped quantile intervals, and bootstrapped t intervals—across varying sample sizes, treatment effects, and error distributions. Wald CI was the fastest but performed poorly under skewed errors. Boot quantile CI had moderate computation time, while Boot t CI improved coverage in skewed data but required the most computational resources. As sample size increased, bias decreased under the normal distribution but increased in the log-normal distribution when the treatment effect was nonzero, suggesting that GLM with a log link may not be ideal for estimating $\beta_{treatment}$ in this setting. The estimated standard error  decreased as sample size grew, with Boot quantile CI producing the smallest standard errors. 
+
 - How do the different methods for constructing confidence intervals compare in terms of computation time?
+
+Wald CI is the fastest, boot quantile CI requires Moderate computation time, and boot t CI is the slowest and requires significantly more computation time than the other two methods.
+
 - Which method(s) for constructing confidence intervals provide the best coverage when $\epsilon_i \sim N(0, 2)$?
+
+Wald CI
+
+
 - Which method(s) for constructing confidence intervals provide the best coverage when $\epsilon_i \sim logNormal(0, \log (2))$?
+
+boot t CI
